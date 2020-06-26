@@ -7,4 +7,4 @@ use Psr\Http\Message\ServerRequestInterface as Request;
 
 $app = new App('routing2');
 
-$app->route('GET', '/users/{name}', fn(Request $req, array $args) => ['name' => $args['name']]);
+$app->route('GET', '/users/{name}', fn(Request $req, array $args) => $args);

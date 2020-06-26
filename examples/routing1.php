@@ -4,8 +4,14 @@ require_once 'vendor/autoload.php';
 
 use Datashaman\Lamduh\App;
 
-$app = new App('routing1');
-
-$app->route('GET', '/', fn () => ['view' => 'index']);
-$app->route('GET', '/a', fn () => ['view' => 'a']);
-$app->route('GET', '/b', fn () => ['view' => 'b']);
+(new App('routing1'))
+    ->route('GET', '/', fn () => ['view' => 'index'])
+    ->route('GET', '/a', fn () => ['view' => 'a'])
+    ->route('GET', '/b', fn () => ['view' => 'b'])
+    ->route(
+        'GET',
+        '/error',
+        function () {
+            throw new Exception('Something bad happened');
+        }
+    );

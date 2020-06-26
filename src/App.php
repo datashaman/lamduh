@@ -3,35 +3,41 @@
 namespace Datashaman\Lamduh;
 
 use Laminas\Diactoros\ResponseFactory;
+use Laminas\Diactoros\ServerRequest;
 use Laminas\Diactoros\ServerRequestFactory;
 use Laminas\HttpHandlerRunner\Emitter\SapiEmitter;
 use League\Route\Router;
 use League\Route\Strategy\JsonStrategy;
+use Whoops\Run;
+use Whoops\Handler\PlainTextHandler;
 
 class App
 {
-    protected Router $router;
     protected array $routes = [];
+    protected bool $hasRun = false;
 
-    /**
-     * @param string|array $methods
-     * @param string $path
-     * @param callable $view
-     */
-    public function route($methods = 'GET', string $path, callable $view)
+    public function route($methods = 'GET', string $path, callable $view): self
     {
         $this->routes[] = [$methods, $path, $view];
+
+        return $this;
     }
 
-    public function __destruct()
+    public function run()
     {
+        $this->hasRun = true;
         $router = $this->createRouter();
         $request = $this->createRequest();
         $response = $router->dispatch($request);
         (new SapiEmitter())->emit($response);
     }
 
-    protected function createRouter()
+    public function __destruct()
+    {
+        $this->hasRun || $this->run();
+    }
+
+    protected function createRouter(): Router
     {
         $responseFactory = new ResponseFactory();
         $strategy = new JsonStrategy($responseFactory);
@@ -44,14 +50,8 @@ class App
         return $router;
     }
 
-    protected function createRequest()
+    protected function createRequest(): ServerRequest
     {
-        return ServerRequestFactory::fromGlobals(
-            $_SERVER,
-            $_GET,
-            $_POST,
-            $_COOKIE,
-            $_FILES
-        );
+        return ServerRequestFactory::fromGlobals();
     }
 }
