@@ -1,20 +1,36 @@
 <?php
 
-namespace Datashaman\Lamduh;
+namespace Datashaman\Phial;
 
+use FastRoute\DataGenerator;
+use FastRoute\RouteParser;
 use Laminas\Diactoros\ResponseFactory;
 use Laminas\Diactoros\ServerRequest;
 use Laminas\Diactoros\ServerRequestFactory;
 use Laminas\HttpHandlerRunner\Emitter\SapiEmitter;
 use League\Route\Router;
-use League\Route\Strategy\JsonStrategy;
-use Whoops\Run;
-use Whoops\Handler\PlainTextHandler;
 
-class App
+$whoops = new \Whoops\Run;
+$whoops->pushHandler(new \Whoops\Handler\PrettyPageHandler);
+$whoops->register();
+
+class App extends Router
 {
-    protected array $routes = [];
+    public bool $debug;
+
     protected bool $hasRun = false;
+
+    public function __construct(
+        string $appName,
+        bool $debug = false,
+        ?RouteParser $parser = null,
+        ?DataGenerator $generator = null
+    ) {
+        $this->appName = $appName;
+        $this->debug = $debug;
+
+        parent::__construct($parser, $generator);
+    }
 
     public function route($methods = 'GET', string $path, callable $view): self
     {
@@ -41,6 +57,7 @@ class App
     {
         $responseFactory = new ResponseFactory();
         $strategy = new JsonStrategy($responseFactory);
+        $strategy->app = $this;
         $router = (new Router())->setStrategy($strategy);
 
         foreach ($this->routes as $route) {

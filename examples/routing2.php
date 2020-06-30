@@ -2,7 +2,7 @@
 
 require_once 'vendor/autoload.php';
 
-use Datashaman\Lamduh\App;
+use Datashaman\Phial\App;
 use Psr\Http\Message\ServerRequestInterface as Request;
 
 $app = new App('routing2');

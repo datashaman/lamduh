@@ -2,9 +2,9 @@
 
 require_once 'vendor/autoload.php';
 
-use Datashaman\Lamduh\App;
+use Datashaman\Phial\App;
 
-(new App('routing1'))
+(new App('routing1', false))
     ->route('GET', '/', fn () => ['view' => 'index'])
     ->route('GET', '/a', fn () => ['view' => 'a'])
     ->route('GET', '/b', fn () => ['view' => 'b'])
