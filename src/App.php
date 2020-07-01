@@ -1,4 +1,4 @@
-<?php
+<?php declare(strict_types=1);
 
 namespace Datashaman\Phial;
 
@@ -17,11 +17,15 @@ use League\Route\Router;
 use Monolog\Logger;
 use Monolog\Handler\StreamHandler;
 use Psr\Http\Message\ResponseInterface;
+use Psr\Http\Message\ServerRequestInterface;
+use Psr\Log\LoggerAwareInterface;
 use Psr\Log\LoggerInterface;
 use Whoops\Run;
 use Whoops\Handler\PrettyPageHandler;
 
-class App
+error_reporting(E_ALL & ~E_USER_DEPRECATED & ~E_DEPRECATED & ~E_STRICT & ~E_NOTICE);
+
+class App implements LoggerAwareInterface
 {
     private bool $_debug;
     private bool $hasRun = false;
@@ -66,6 +70,11 @@ class App
         $this->createEmitter()->emit($response);
     }
 
+    public function setLogger(LoggerInterface $logger)
+    {
+        $this->container->set(LoggerInterface::class, $logger);
+    }
+
     public function __destruct()
     {
         $this->hasRun || $this->run();
@@ -85,7 +94,7 @@ class App
             $logger->pushHandler(new StreamHandler($this->container->get('log.path')));
         }
 
-        $this->container->set(LoggerInterface::class, $logger);
+        $this->setLogger($logger);
     }
 
     private function createEmitter(int $maxBufferLength = 2048): EmitterInterface
@@ -120,7 +129,7 @@ class App
         return $stack;
     }
 
-    private function createRequest(): ServerRequest
+    private function createRequest(): ServerRequestInterface
     {
         return ServerRequestFactory::fromGlobals();
     }
