@@ -10,13 +10,13 @@ $app = new App('routing4');
 $app->route(
     'GET',
     '/users/{name}',
-    function (Request $req, array $args) {
+    function (Request $req, $name) {
         $params = $req->getQueryParams();
 
-        $result = $args;
+        $result = ['name' => $name];
 
         if (($params['include-greeting'] ?? '') === 'true') {
-            $result['greeting'] = "Hello, {$args['name']}";
+            $result['greeting'] = "Hello, $name";
         }
 
         return $result;

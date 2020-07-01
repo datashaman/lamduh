@@ -3,15 +3,18 @@
 require_once 'vendor/autoload.php';
 
 use Datashaman\Phial\App;
+use Psr\Log\LoggerInterface;
 
-(new App('routing1', false))
+(new App('routing1'))
+    ->debug(true)
     ->route('GET', '/', fn () => ['view' => 'index'])
     ->route('GET', '/a', fn () => ['view' => 'a'])
     ->route('GET', '/b', fn () => ['view' => 'b'])
     ->route(
         'GET',
         '/error',
-        function () {
+        function (LoggerInterface $logger) {
+            $logger->warning('YOYO');
             throw new Exception('Something bad happened');
         }
     );
