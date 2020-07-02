@@ -1,5 +1,7 @@
 <?php
 
+declare(strict_types=1);
+
 require_once 'vendor/autoload.php';
 
 use Datashaman\Phial\App;
@@ -13,7 +15,7 @@ use Psr\Log\LoggerInterface;
     ->route(
         'GET',
         '/error',
-        function (LoggerInterface $logger) {
+        function (LoggerInterface $logger): void {
             $logger->warning('YOYO');
             throw new Exception('Something bad happened');
         }

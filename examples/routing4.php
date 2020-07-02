@@ -1,5 +1,7 @@
 <?php
 
+declare(strict_types=1);
+
 require_once 'vendor/autoload.php';
 
 use Datashaman\Phial\App;
@@ -16,7 +18,7 @@ $app->route(
         $result = ['name' => $name];
 
         if (($params['include-greeting'] ?? '') === 'true') {
-            $result['greeting'] = "Hello, $name";
+            $result['greeting'] = "Hello, ${name}";
         }
 
         return $result;

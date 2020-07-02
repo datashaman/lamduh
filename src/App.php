@@ -1,132 +1,105 @@
-<?php declare(strict_types=1);
+<?php
+
+declare(strict_types=1);
 
 namespace Datashaman\Phial;
 
-use DI\Container;
 use DI\ContainerBuilder;
-use FastRoute\DataGenerator;
-use FastRoute\RouteParser;
-use Laminas\Diactoros\ResponseFactory;
-use Laminas\Diactoros\ServerRequest;
 use Laminas\Diactoros\ServerRequestFactory;
 use Laminas\HttpHandlerRunner\Emitter\EmitterInterface;
-use Laminas\HttpHandlerRunner\Emitter\EmitterStack;
-use Laminas\HttpHandlerRunner\Emitter\SapiEmitter;
-use Laminas\HttpHandlerRunner\Emitter\SapiStreamEmitter;
-use League\Route\Router;
-use Monolog\Logger;
-use Monolog\Handler\StreamHandler;
-use Psr\Http\Message\ResponseInterface;
 use Psr\Http\Message\ServerRequestInterface;
+use Psr\Http\Server\RequestHandlerInterface;
 use Psr\Log\LoggerAwareInterface;
 use Psr\Log\LoggerInterface;
-use Whoops\Run;
 use Whoops\Handler\PrettyPageHandler;
+use Whoops\Run;
 
-error_reporting(E_ALL & ~E_USER_DEPRECATED & ~E_DEPRECATED & ~E_STRICT & ~E_NOTICE);
-
-class App implements LoggerAwareInterface
+final class App implements LoggerAwareInterface
 {
-    private bool $_debug;
     private bool $hasRun = false;
-    private Container $container;
+    private array $routes = [];
 
-    public function __construct(
-        string $appName,
-        bool $debug = false,
-        LoggerInterface $logger = null
-    ) {
+    public function __construct(string $appName)
+    {
         $this->appName = $appName;
-        $this->_debug = $debug;
 
-        $this->buildContainer();
-        $this->configureLogging($logger);
+        error_reporting(
+            E_ALL &
+            ~E_USER_DEPRECATED &
+            ~E_DEPRECATED &
+            ~E_STRICT &
+            ~E_NOTICE
+        );
+
         $this->registerErrorHandler();
+        $this->container = $this->buildContainer();
     }
 
-    public function debug($debug = null)
+    public function __destruct()
+    {
+        if (! $this->hasRun) {
+            $this->run();
+        }
+    }
+
+    /**
+     * @param ?bool $debug
+     *
+     * @return bool|self
+     */
+    public function debug(?bool $debug = null)
     {
         if (func_num_args() === 0) {
-            return $this->_debug;
+            return $this->container->get('app.debug');
         }
 
-        $this->_debug = $debug;
+        $this->container->set('app.debug', $debug);
 
         return $this;
     }
 
-    public function route($methods = 'GET', string $path, callable $view): self
+    /**
+     * @param string|string[] $methods
+     * @param string $path
+     * @param callable $view
+     *
+     * @return self
+     */
+    public function route($methods, string $path, callable $view): self
     {
         $this->routes[] = [$methods, $path, $view];
 
         return $this;
     }
 
-    public function run()
+    public function run(): void
     {
+        $router = $this->container->get(RequestHandlerInterface::class);
+
         $this->hasRun = true;
+
+        foreach ($this->routes as $route) {
+            $router->map(...$route);
+        }
+
         $request = $this->createRequest();
-        $response = $this->createRouter()->dispatch($request);
-        $this->createEmitter()->emit($response);
+        $response = $router->dispatch($request);
+
+        $emitter = $this->container->get(EmitterInterface::class);
+        $emitter->emit($response);
     }
 
-    public function setLogger(LoggerInterface $logger)
+    public function setLogger(LoggerInterface $logger): void
     {
         $this->container->set(LoggerInterface::class, $logger);
     }
 
-    public function __destruct()
-    {
-        $this->hasRun || $this->run();
-    }
-
-    private function buildContainer()
+    private function buildContainer(): ContainerInterface
     {
         $containerBuilder = new ContainerBuilder();
         $containerBuilder->addDefinitions(__DIR__ . '/../config.php');
-        $this->container = $containerBuilder->build();
-    }
 
-    private function configureLogging(?LoggerInterface $logger)
-    {
-        if (!$logger) {
-            $logger = new Logger($this->appName);
-            $logger->pushHandler(new StreamHandler($this->container->get('log.path')));
-        }
-
-        $this->setLogger($logger);
-    }
-
-    private function createEmitter(int $maxBufferLength = 2048): EmitterInterface
-    {
-        $sapiStreamEmitter = new SapiStreamEmitter($maxBufferLength);
-
-        $conditionalEmitter = new class ($sapiStreamEmitter) implements EmitterInterface {
-            private $emitter;
-
-            public function __construct(EmitterInterface $emitter)
-            {
-                $this->emitter = $emitter;
-            }
-
-            public function emit(ResponseInterface $response) : bool
-            {
-                if (! $response->hasHeader('Content-Disposition')
-                    && ! $response->hasHeader('Content-Range')
-                ) {
-                    return false;
-                }
-
-                return $this->emitter->emit($response);
-            }
-        };
-
-        $stack = new EmitterStack();
-
-        $stack->push(new SapiEmitter());
-        $stack->push($conditionalEmitter);
-
-        return $stack;
+        return $containerBuilder->build();
     }
 
     private function createRequest(): ServerRequestInterface
@@ -134,21 +107,7 @@ class App implements LoggerAwareInterface
         return ServerRequestFactory::fromGlobals();
     }
 
-    private function createRouter(): Router
-    {
-        $responseFactory = new ResponseFactory();
-        $strategy = (new JsonStrategy($responseFactory))->setContainer($this->container);
-        $strategy->app($this);
-        $router = (new Router())->setStrategy($strategy);
-
-        foreach ($this->routes as $route) {
-            $router->map(...$route);
-        }
-
-        return $router;
-    }
-
-    private function registerErrorHandler()
+    private function registerErrorHandler(): void
     {
         $whoops = new Run();
         $whoops->pushHandler(new PrettyPageHandler());

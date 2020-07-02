@@ -1,32 +1,24 @@
 <?php
 
+declare(strict_types=1);
+
 namespace Datashaman\Phial;
 
+use League\Route\Http\Exception as HttpException;
+use League\Route\Route;
+use Psr\Container\ContainerInterface;
 use Psr\Http\Message\ResponseInterface;
 use Psr\Http\Message\ServerRequestInterface;
 use Psr\Http\Server\MiddlewareInterface;
 use Psr\Http\Server\RequestHandlerInterface;
-use League\Route\Http\Exception as HttpException;
-use League\Route\Route;
 use Throwable;
 
-class JsonStrategy extends \League\Route\Strategy\JsonStrategy
+final class JsonStrategy extends \League\Route\Strategy\JsonStrategy
 {
-    private App $_app;
-
-    public function app($app = null)
-    {
-        if (func_num_args() === 0) {
-            return $this->_app;
-        }
-
-        $this->_app = $app;
-
-        return $this;
-    }
-
-    public function invokeRouteCallable(Route $route, ServerRequestInterface $request): ResponseInterface
-    {
+    public function invokeRouteCallable(
+        Route $route,
+        ServerRequestInterface $request
+    ): ResponseInterface {
         $container = $this->getContainer();
         $container->set(ServerRequestInterface::class, $request);
 
@@ -34,27 +26,26 @@ class JsonStrategy extends \League\Route\Strategy\JsonStrategy
         $response = $container->call($controller, $route->getVars());
 
         if ($this->isJsonEncodable($response)) {
-            $body     = json_encode($response, $this->jsonFlags);
+            $body = json_encode($response, $this->jsonFlags);
             $response = $this->responseFactory->createResponse();
             $response->getBody()->write($body);
         }
 
-        $response = $this->applyDefaultResponseHeaders($response);
-
-        return $response;
+        return $this->applyDefaultResponseHeaders($response);
     }
 
     public function getThrowableHandler(): MiddlewareInterface
     {
-        return new class($this->responseFactory->createResponse(), $this->_app) implements MiddlewareInterface
-        {
-            protected $response;
-            protected $app;
+        return new class($this->container, $this->responseFactory->createResponse()) implements MiddlewareInterface {
+            private ContainerInterface $container;
+            private ResponseInterface $response;
 
-            public function __construct(ResponseInterface $response, App $app)
-            {
+            public function __construct(
+                ContainerInterface $container,
+                ResponseInterface $response
+            ) {
+                $this->container = $container;
                 $this->response = $response;
-                $this->app = $app;
             }
 
             public function process(
@@ -70,17 +61,28 @@ class JsonStrategy extends \League\Route\Strategy\JsonStrategy
                         return $exception->buildJsonResponse($response);
                     }
 
-                    if ($this->app->debug()) {
+                    if ($this->container->get('app.debug')) {
                         throw $exception;
                     }
 
-                    $response->getBody()->write(json_encode([
-                        'status_code'   => 500,
-                        'reason_phrase' => $exception->getMessage()
-                    ]));
+                    $response->getBody()->write(
+                        json_encode(
+                            [
+                                'status_code' => 500,
+                                'reason_phrase' => $exception->getMessage(),
+                            ]
+                        )
+                    );
 
-                    $response = $response->withAddedHeader('content-type', 'application/json');
-                    return $response->withStatus(500, strtok($exception->getMessage(), "\n"));
+                    $response = $response->withAddedHeader(
+                        'content-type',
+                        'application/json'
+                    );
+
+                    return $response->withStatus(
+                        500,
+                        strtok($exception->getMessage(), "\n")
+                    );
                 }
             }
         };
