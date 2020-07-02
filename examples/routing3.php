@@ -9,4 +9,4 @@ use Psr\Http\Message\ServerRequestInterface as Request;
 
 $app = new App('routing3');
 
-$app->route('GET', '/a/{first}/b/{second}', fn($first, $seconds) => ['first' => $first, 'second' => $second]);
+$app->route('GET', '/a/{first}/b/{second}', fn($first, $second) => ['first' => $first, 'second' => $second]);
