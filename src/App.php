@@ -10,20 +10,19 @@ use Laminas\HttpHandlerRunner\Emitter\EmitterInterface;
 use Psr\Container\ContainerInterface;
 use Psr\Http\Message\ServerRequestInterface;
 use Psr\Http\Server\RequestHandlerInterface;
-use Psr\Log\LoggerAwareInterface;
 use Psr\Log\LoggerInterface;
 use Whoops\Handler\PrettyPageHandler;
 use Whoops\Run;
 
-final class App implements LoggerAwareInterface
+final class App
 {
     private bool $hasRun = false;
     private array $routes = [];
 
-    public function __construct(string $appName)
-    {
-        $this->appName = $appName;
-
+    public function __construct(
+        string $appName,
+        LoggerInterface $logger = null
+    ) {
         error_reporting(
             E_ALL &
             ~E_USER_DEPRECATED &
@@ -32,8 +31,18 @@ final class App implements LoggerAwareInterface
             ~E_NOTICE
         );
 
+        $this->appName = $appName;
         $this->registerErrorHandler();
         $this->container = $this->buildContainer();
+        $this->container->set(
+            LoggerInterface::class,
+            $logger ?: $this->container->make(
+                LoggerInterface::class,
+                [
+                    'appName' => $appName,
+                ]
+            )
+        );
     }
 
     public function __destruct()
@@ -88,11 +97,6 @@ final class App implements LoggerAwareInterface
 
         $emitter = $this->container->get(EmitterInterface::class);
         $emitter->emit($response);
-    }
-
-    public function setLogger(LoggerInterface $logger): void
-    {
-        $this->container->set(LoggerInterface::class, $logger);
     }
 
     private function buildContainer(): ContainerInterface
