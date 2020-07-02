@@ -37,7 +37,7 @@ final class Strategy extends JsonStrategy
 
     public function getThrowableHandler(): MiddlewareInterface
     {
-        return new class($this->container, $this->responseFactory->createResponse()) implements MiddlewareInterface {
+        return new class($this->getContainer(), $this->responseFactory->createResponse()) implements MiddlewareInterface {
             private ContainerInterface $container;
             private ResponseInterface $response;
 
