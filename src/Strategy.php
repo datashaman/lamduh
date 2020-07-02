@@ -6,6 +6,7 @@ namespace Datashaman\Phial;
 
 use League\Route\Http\Exception as HttpException;
 use League\Route\Route;
+use League\Route\Strategy\JsonStrategy;
 use Psr\Container\ContainerInterface;
 use Psr\Http\Message\ResponseInterface;
 use Psr\Http\Message\ServerRequestInterface;
@@ -13,7 +14,7 @@ use Psr\Http\Server\MiddlewareInterface;
 use Psr\Http\Server\RequestHandlerInterface;
 use Throwable;
 
-final class JsonStrategy extends \League\Route\Strategy\JsonStrategy
+final class Strategy extends JsonStrategy
 {
     public function invokeRouteCallable(
         Route $route,

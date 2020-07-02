@@ -6,7 +6,7 @@ namespace Datashaman\Phial;
 
 use Monolog\Handler\StreamHandler;
 
-class Logger extends \Monolog\Logger
+final class Logger extends \Monolog\Logger
 {
     public function __construct(
         string $appName = 'phial',

@@ -1,11 +1,13 @@
 <?php
 
+declare(strict_types=1);
+
 namespace Datashaman\Phial\Emitter;
 
 use Laminas\HttpHandlerRunner\Emitter\EmitterInterface;
 use Psr\Http\Message\ResponseInterface;
 
-class ConditionalEmitter implements EmitterInterface
+final class ConditionalEmitter implements EmitterInterface
 {
     private EmitterInterface $emitter;
 
@@ -14,7 +16,7 @@ class ConditionalEmitter implements EmitterInterface
         $this->emitter = $emitter;
     }
 
-    public function emit(ResponseInterface $response) : bool
+    public function emit(ResponseInterface $response): bool
     {
         if (! $response->hasHeader('Content-Disposition')
             && ! $response->hasHeader('Content-Range')

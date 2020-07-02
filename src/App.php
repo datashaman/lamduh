@@ -21,7 +21,7 @@ final class App
 
     public function __construct(
         string $appName,
-        LoggerInterface $logger = null
+        ?LoggerInterface $logger = null
     ) {
         error_reporting(
             E_ALL &
