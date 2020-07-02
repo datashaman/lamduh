@@ -16,15 +16,15 @@ return [
             DI\get('http.maxBufferLength')
         ),
 
+    Psr\Http\Server\RequestHandlerInterface::class => DI\create(Datashaman\Phial\RequestHandler::class)
+        ->constructor(
+            DI\get(Psr\Container\ContainerInterface::class)
+        ),
+
     Psr\Log\LoggerInterface::class => DI\create(Datashaman\Phial\Logger::class)
         ->constructor(
             DI\get('app.name'),
             DI\get('log.path'),
             DI\get('log.level')
-        ),
-
-    Psr\Http\Server\RequestHandlerInterface::class => DI\create(Datashaman\Phial\RequestHandler::class)
-        ->constructor(
-            DI\get(Psr\Container\ContainerInterface::class)
         ),
 ];
