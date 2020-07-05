@@ -21,6 +21,11 @@ class LocalCommand extends Command
 
     protected function execute(InputInterface $input, OutputInterface $output)
     {
+        $host = $input->getOption('host');
+        $port = (int) $input->getOption('port');
+
+        `php -S $host:$port app.php`;
+
         return Command::SUCCESS;
     }
 }
