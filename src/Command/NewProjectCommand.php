@@ -51,17 +51,17 @@ class NewProjectCommand extends Command
                 $projectName,
                 DEFAULT_STAGE_NAME,
                 DEFAULT_APIGATEWAY_STAGE_NAME
-            )
+            ) . PHP_EOL
         );
 
         file_put_contents(
             $projectName . DIRECTORY_SEPARATOR . 'app.php',
-            sprintf(TEMPLATE_APP, $projectName) . "\n"
+            sprintf(TEMPLATE_APP, $projectName) . PHP_EOL
         );
 
         file_put_contents(
             $projectName . DIRECTORY_SEPARATOR . 'composer.json',
-            sprintf(TEMPLATE_COMPOSER, $projectName) . "\n"
+            sprintf(TEMPLATE_COMPOSER, $projectName) . PHP_EOL
         );
 
         chdir($projectName);
