@@ -1,11 +1,5 @@
 FROM lambci/lambda-base-2:build
 
-ARG BISON_VERSION=3.6
-ARG PHP_VERSION=7.4.7
-ARG PYTHONUNBUFFERED=1
-
-ENV AWS_EXECUTION_ENV=AWS_Lambda_PHP_${PHP_VERSION}
-
 RUN yum update -y \
     && yum install -y \
         autoconf \
@@ -24,18 +18,17 @@ RUN curl -sL http://mirror.ufs.ac.za/gnu/bison/bison-$BISON_VERSION.tar.gz | tar
     && make \
     && make install
 
-RUN mkdir -p /var/task/php-$PHP_VERSION \
-    && curl -sL https://github.com/php/php-src/archive/php-$PHP_VERSION.tar.gz | tar -xvz \
+RUN curl -sL https://github.com/php/php-src/archive/php-$PHP_VERSION.tar.gz | tar -xvz \
     && cd php-src-php-$PHP_VERSION \
     && ./buildconf --force \
-    && ./configure --prefix=/usr --with-openssl --with-curl --with-zlib --without-pear \
+    && ./configure --prefix=/var/task --with-openssl --with-curl --with-zlib --without-pear \
     && make install
 
 COPY bootstrap .
-RUN chmod +x bootstrap
+RUN chmod +x bootstrap \
+    && zip -r runtime.zip bin bootstrap
 
-RUN curl -sS https://getcomposer.org/installer | php \
-    && mv composer.phar /usr/local/bin/composer \
-    && composer require guzzlehttp/guzzle
-
-ENTRYPOINT ["/var/task/bootstrap"]
+RUN PATH=/var/task/bin:$PATH \
+    && curl -sS https://getcomposer.org/installer | php \
+    && php composer.phar require --optimize-autoloader guzzlehttp/guzzle \
+    && zip -r vendor.zip vendor/
