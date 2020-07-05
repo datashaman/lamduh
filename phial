@@ -94,15 +94,7 @@ define('TEMPLATE_CONFIG', <<<EOF
 
 declare(strict_types=1);
 
-return [
-    'version' => '%s',
-    'app_name' => '%s',
-    'stages' => [
-        '%s' => [
-            'api_gateway_stage' => '%s',
-        ],
-    ],
-];
+return %s;
 EOF
 );
 
@@ -110,7 +102,7 @@ $definition = new InputDefinition(
     [
         new InputArgument('command', InputArgument::REQUIRED, 'The command to execute'),
 
-        new InputOption('--project-dir', null, InputOption::VALUE_REQUIRED, 'The project directory path (absolute or relative). Defaults to CWD.'),
+        new InputOption('--project-dir', null, InputOption::VALUE_REQUIRED, 'The project directory path (absolute or relative).', getcwd()),
 
         new InputOption('--help', '-h', InputOption::VALUE_NONE, 'Display this help message'),
         new InputOption('--quiet', '-q', InputOption::VALUE_NONE, 'Do not output any message'),

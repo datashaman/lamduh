@@ -16,7 +16,7 @@ class DeleteCommand extends Command
     {
         $this
             ->addOption('profile', null, InputOption::VALUE_REQUIRED, 'Override profile at deploy time.')
-            ->addOption('stage', null, InputOption::VALUE_REQUIRED, 'Name of the Phial stage to delete.');
+            ->addOption('stage', null, InputOption::VALUE_REQUIRED, 'Name of the Phial stage to delete.', DEFAULT_STAGE_NAME);
     }
 
     protected function execute(InputInterface $input, OutputInterface $output)

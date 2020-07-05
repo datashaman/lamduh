@@ -14,24 +14,13 @@ class LocalCommand extends Command
     protected function configure()
     {
         $this
-            ->addOption('host', null, InputOption::VALUE_REQUIRED)
-            ->addOption('port', null, InputOption::VALUE_REQUIRED)
-            ->addOption('stage', null, InputOption::VALUE_REQUIRED, 'Name of the Phial stage for the local server to use.');
+            ->addOption('host', null, InputOption::VALUE_REQUIRED, 'Local server uses this host', '127.0.0.1')
+            ->addOption('port', null, InputOption::VALUE_REQUIRED, 'Local server uses this port', 8000)
+            ->addOption('stage', null, InputOption::VALUE_REQUIRED, 'Name of the Phial stage for the local server to use.', DEFAULT_STAGE_NAME);
     }
 
     protected function execute(InputInterface $input, OutputInterface $output)
     {
-        // ... put here the code to run in your command
-
-        // this method must return an integer number with the "exit status code"
-        // of the command. You can also use these constants to make code more readable
-
-        // return this if there was no problem running the command
-        // (it's equivalent to returning int(0))
         return Command::SUCCESS;
-
-        // or return this if some error happened during the execution
-        // (it's equivalent to returning int(1))
-        // return Command::FAILURE;
     }
 }

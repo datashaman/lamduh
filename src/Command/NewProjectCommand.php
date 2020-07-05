@@ -20,6 +20,28 @@ class NewProjectCommand extends Command
             ->addOption('profile', null, InputOption::VALUE_REQUIRED);
     }
 
+    protected function export($expression): string
+    {
+        $export = var_export($expression, true);
+        $export = preg_replace("/^([ ]*)(.*)/m", '$1$1$2', $export);
+        $array = preg_split("/\r\n|\n|\r/", $export);
+        $array = preg_replace(
+            [
+                "/\s*array\s\($/",
+                "/\)(,)?$/",
+                "/\s=>\s$/"
+            ],
+            [
+                null,
+                ']$1',
+                ' => ['
+            ],
+            $array
+        );
+
+        return join(PHP_EOL, array_filter(["["] + $array));
+    }
+
     protected function execute(InputInterface $input, OutputInterface $output)
     {
         $projectName = $input->getArgument('project-name');
@@ -39,6 +61,16 @@ class NewProjectCommand extends Command
             return Command::FAILURE;
         }
 
+        $cfg = [
+            'app_name' => $projectName,
+            'stages' => [
+                DEFAULT_STAGE_NAME => [
+                    'api_gateway_stage' => DEFAULT_APIGATEWAY_STAGE_NAME,
+                ],
+            ],
+            'version' => CONFIG_VERSION,
+        ];
+
         if ($profile) {
             $cfg['profile'] = $profile;
         }
@@ -47,10 +79,7 @@ class NewProjectCommand extends Command
             $phialDir . DIRECTORY_SEPARATOR . 'config.php',
             sprintf(
                 TEMPLATE_CONFIG,
-                CONFIG_VERSION,
-                $projectName,
-                DEFAULT_STAGE_NAME,
-                DEFAULT_APIGATEWAY_STAGE_NAME
+                $this->export($cfg)
             ) . PHP_EOL
         );
 

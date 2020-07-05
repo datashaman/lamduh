@@ -18,8 +18,8 @@ class DeployCommand extends Command
             ->addOption('autogen-policy', null, InputOption::VALUE_NONE, 'Automatically generate IAM policy for app code.')
             ->addOption('profile', null, InputOption::VALUE_REQUIRED, 'Override profile at deploy time.')
             ->addOption('api-gateway-stage', null, InputOption::VALUE_REQUIRED, 'Name of the API gateway stage to deploy to.')
-            ->addOption('stage', null, InputOption::VALUE_REQUIRED, 'Name of the Phial stage to deploy to. Specifying a new phial stage will create an entirely new set of AWS resources.')
-            ->addOption('connection-timeout', null, InputOption::VALUE_REQUIRED, 'Overrides the default botocore connection timeout.');
+            ->addOption('stage', null, InputOption::VALUE_REQUIRED, 'Name of the Phial stage to deploy to. Specifying a new phial stage will create an entirely new set of AWS resources.', DEFAULT_STAGE_NAME)
+            ->addOption('connection-timeout', null, InputOption::VALUE_REQUIRED, 'Overrides the default connection timeout.');
     }
 
     protected function execute(InputInterface $input, OutputInterface $output)
