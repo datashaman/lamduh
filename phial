@@ -36,6 +36,8 @@ define('TEMPLATE_APP', <<<EOF
 
 declare(strict_types=1);
 
+require_once 'vendor/autoload.php';
+
 use Datashaman\Phial\Phial;
 
 \$app = new Phial('%s');
