@@ -58,6 +58,15 @@ final class Phial
         return $this;
     }
 
+    public function deploy(
+        ?bool $autogenPolicy = null,
+        ?string $profile = null,
+        ?string $apiGatewayStage = null,
+        ?string $stage = DEFAULT_STAGE_NAME,
+        ?int $connectionTimeout = null
+    ) {
+    }
+
     /**
      * @param string|string[] $methods
      * @param string $path
