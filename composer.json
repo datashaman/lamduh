@@ -1,7 +1,7 @@
 {
     "name": "datashaman/phial",
-    "description": "AWS Lambda microframework based on Python's Chalice",
     "type": "library",
+    "description": "AWS Lambda microframework based on Python's Chalice",
     "license": "MIT",
     "authors": [
         {
@@ -12,21 +12,23 @@
     "require": {
         "php": ">=7.4",
         "aws/aws-sdk-php": "^3.143",
-        "league/route": "^4.5",
+        "filp/whoops": "^2.7",
         "laminas/laminas-diactoros": "^2.3",
         "laminas/laminas-httphandlerrunner": "^1.2",
-        "filp/whoops": "^2.7",
+        "league/route": "^4.5",
         "monolog/monolog": "^2.1",
-        "psr/log": "^1.1",
         "php-di/php-di": "^6.2",
-        "symfony/var-dumper": "^5.1",
-        "symfony/console": "^5.1"
+        "psr/log": "^1.1",
+        "symfony/console": "^5.1",
+        "symfony/var-dumper": "^5.1"
     },
+    "require-dev": {},
     "autoload": {
         "psr-4": {
             "Datashaman\\Phial\\": "src/"
         }
     },
-    "require-dev": {
-    }
+    "bin": [
+        "phial"
+    ]
 }
