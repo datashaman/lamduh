@@ -4,10 +4,10 @@ declare(strict_types=1);
 
 require_once 'vendor/autoload.php';
 
-use Datashaman\Phial\App;
+use Datashaman\Phial\Phial;
 use Psr\Http\Message\ServerRequestInterface;
 
-$app = new App('routing4');
+$app = new Phial('routing4');
 
 $app->route(
     'GET',

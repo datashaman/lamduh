@@ -1,0 +1,140 @@
+#!/usr/bin/env php
+<?php
+
+if (file_exists(__DIR__ . '/vendor/autoload.php')) {
+    require_once __DIR__ . '/vendor/autoload.php';
+} else {
+    require_once __DIR__ . '/../../autoload.php';
+}
+
+use Datashaman\Phial\Command\{
+    DeleteCommand,
+    DeployCommand,
+    DevCommand,
+    GenPolicyCommand,
+    GenerateModelsCommand,
+    GeneratePipelineCommand,
+    GenerateSdkCommand,
+    InvokeCommand,
+    LocalCommand,
+    LogsCommand,
+    NewProjectCommand,
+    PackageCommand,
+    UrlCommand,
+};
+use Symfony\Component\Console\Application;
+use Symfony\Component\Console\Input\InputArgument;
+use Symfony\Component\Console\Input\InputDefinition;
+use Symfony\Component\Console\Input\InputOption;
+
+define('CONFIG_VERSION', '0.1.0');
+define('DEFAULT_STAGE_NAME', 'dev');
+define('DEFAULT_APIGATEWAY_STAGE_NAME', 'api');
+
+define('TEMPLATE_APP', <<<EOF
+<?php
+
+declare(strict_types=1);
+
+use Datashaman\Phial\Phial;
+
+\$app = new Phial('%s');
+
+\$app->route('GET', '/', function () {
+    return [
+        'hello' => 'world',
+    ];
+});
+
+/**
+ * The view function above will return {"hello": "world"}
+ * whenever you make an HTTP GET request to '/'.
+ * 
+ * Here is another example with a route argument:
+ * 
+ * \$app->route('GET', '/hello/{name}', function (\$name) {
+ *     return ['hello' => \$name];
+ * });
+ *
+ * See the README documentation for more examples.
+ */
+EOF
+);
+
+define('TEMPLATE_COMPOSER', <<<EOF
+{
+    "type": "project",
+    "keywords": [
+        "framework",
+        "phial"
+    ],
+    "require": {
+        "php": ">=7.4",
+        "datashaman/phial": "dev-master"
+    },
+    "require-dev": {
+    },
+    "config": {
+        "optimize-autoloader": true,
+        "preferred-install": "dist",
+        "sort-packages": true
+    },
+    "minimum-stability": "dev",
+    "prefer-stable": true,
+    "scripts": {
+    }
+}
+EOF
+);
+
+define('TEMPLATE_CONFIG', <<<EOF
+<?php
+
+declare(strict_types=1);
+
+return [
+    'version' => '%s',
+    'app_name' => '%s',
+    'stages' => [
+        '%s' => [
+            'api_gateway_stage' => '%s',
+        ],
+    ],
+];
+EOF
+);
+
+$definition = new InputDefinition(
+    [
+        new InputArgument('command', InputArgument::REQUIRED, 'The command to execute'),
+
+        new InputOption('--project-dir', null, InputOption::VALUE_REQUIRED, 'The project directory path (absolute or relative). Defaults to CWD.'),
+
+        new InputOption('--help', '-h', InputOption::VALUE_NONE, 'Display this help message'),
+        new InputOption('--quiet', '-q', InputOption::VALUE_NONE, 'Do not output any message'),
+        new InputOption('--verbose', '-v|vv|vvv', InputOption::VALUE_NONE, 'Increase the verbosity of messages: 1 for normal output, 2 for more verbose output and 3 for debug'),
+        new InputOption('--version', '-V', InputOption::VALUE_NONE, 'Display this application version'),
+        new InputOption('--ansi', '', InputOption::VALUE_NONE, 'Force ANSI output'),
+        new InputOption('--no-ansi', '', InputOption::VALUE_NONE, 'Disable ANSI output'),
+        new InputOption('--no-interaction', '-n', InputOption::VALUE_NONE, 'Do not ask any interactive question'),
+    ]
+);
+
+$application = new Application('phial', CONFIG_VERSION);
+$application->setDefinition($definition);
+
+$application->add(new DeleteCommand());
+$application->add(new DeployCommand());
+$application->add(new DevCommand());
+$application->add(new GenPolicyCommand());
+$application->add(new GenerateModelsCommand());
+$application->add(new GeneratePipelineCommand());
+$application->add(new GenerateSdkCommand());
+$application->add(new InvokeCommand());
+$application->add(new LocalCommand());
+$application->add(new LogsCommand());
+$application->add(new NewProjectCommand());
+$application->add(new PackageCommand());
+$application->add(new UrlCommand());
+
+$application->run();

@@ -5,7 +5,6 @@ declare(strict_types=1);
 namespace Datashaman\Phial;
 
 use DI\ContainerBuilder;
-use Laminas\Diactoros\ServerRequestFactory;
 use Laminas\HttpHandlerRunner\Emitter\EmitterInterface;
 use Psr\Container\ContainerInterface;
 use Psr\Http\Message\ServerRequestInterface;
@@ -14,29 +13,22 @@ use Psr\Log\LoggerInterface;
 use Whoops\Handler\PrettyPageHandler;
 use Whoops\Run;
 
-final class App
+final class Phial
 {
-    private bool $hasRun = false;
-    private array $routes = [];
-
+    /**
+     * @param string $appName
+     * @param ?LoggerInterface $logger
+     */
     public function __construct(
         string $appName,
         ?LoggerInterface $logger = null
     ) {
-        error_reporting(
-            E_ALL &
-            ~E_USER_DEPRECATED &
-            ~E_DEPRECATED &
-            ~E_STRICT &
-            ~E_NOTICE
-        );
-
         $this->appName = $appName;
         $this->registerErrorHandler();
         $this->container = $this->buildContainer();
         $this->container->set(
             LoggerInterface::class,
-            $logger ?: $this->container->make(
+            $logger ? $logger : $this->container->make(
                 LoggerInterface::class,
                 [
                     'appName' => $appName,
@@ -47,9 +39,7 @@ final class App
 
     public function __destruct()
     {
-        if (! $this->hasRun) {
-            $this->run();
-        }
+        $this->container->call([$this, 'run']);
     }
 
     /**
@@ -77,26 +67,20 @@ final class App
      */
     public function route($methods, string $path, callable $view): self
     {
-        $this->routes[] = [$methods, $path, $view];
+        $this
+            ->container
+            ->get(RequestHandlerInterface::class)
+            ->map($methods, $path, $view);
 
         return $this;
     }
 
-    public function run(): void
-    {
-        $router = $this->container->get(RequestHandlerInterface::class);
-
-        $this->hasRun = true;
-
-        foreach ($this->routes as $route) {
-            $router->map(...$route);
-        }
-
-        $request = $this->createRequest();
-        $response = $router->dispatch($request);
-
-        $emitter = $this->container->get(EmitterInterface::class);
-        $emitter->emit($response);
+    public function run(
+        ServerRequestInterface $serverRequest,
+        RequestHandlerInterface $requestHandler,
+        EmitterInterface $emitter
+    ): void {
+        $emitter->emit($requestHandler->dispatch($serverRequest));
     }
 
     private function buildContainer(): ContainerInterface
@@ -107,13 +91,16 @@ final class App
         return $containerBuilder->build();
     }
 
-    private function createRequest(): ServerRequestInterface
-    {
-        return ServerRequestFactory::fromGlobals();
-    }
-
     private function registerErrorHandler(): void
     {
+        error_reporting(
+            E_ALL &
+            ~E_USER_DEPRECATED &
+            ~E_DEPRECATED &
+            ~E_STRICT &
+            ~E_NOTICE
+        );
+
         $whoops = new Run();
         $whoops->pushHandler(new PrettyPageHandler());
         $whoops->register();

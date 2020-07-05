@@ -3,7 +3,7 @@
 declare(strict_types=1);
 
 return [
-    'app.debug' => true,
+    'app.debug' => false,
     'app.name' => 'phial',
 
     'http.maxBufferLength' => 2048,
@@ -15,6 +15,8 @@ return [
         ->constructor(
             DI\get('http.maxBufferLength')
         ),
+
+    Psr\Http\Message\ServerRequestInterface::class => fn () => Laminas\Diactoros\ServerRequestFactory::fromGlobals(),
 
     Psr\Http\Server\RequestHandlerInterface::class => DI\create(Datashaman\Phial\RequestHandler::class)
         ->constructor(

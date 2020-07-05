@@ -4,11 +4,11 @@ declare(strict_types=1);
 
 require_once 'vendor/autoload.php';
 
-use Datashaman\Phial\App;
+use Datashaman\Phial\Phial;
 use Psr\Log\LoggerInterface;
 
-(new App('routing1'))
-    ->debug(true)
+(new Phial('routing1'))
+    // ->debug(true)
     ->route('GET', '/', fn () => ['view' => 'index'])
     ->route('GET', '/a', fn () => ['view' => 'a'])
     ->route('GET', '/b', fn () => ['view' => 'b'])
