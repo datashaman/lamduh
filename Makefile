@@ -1,3 +1,5 @@
+DOCKER_TAG = datashaman/phial-7.4
+
 # INSTANCE_TYPE = t2.large
 IMAGE_ID = ami-08935252a36e25f85
 INSTANCE_TYPE = t2.micro
@@ -12,12 +14,11 @@ examples = $(notdir $(wildcard examples/*))
 $(examples):
 	./phial local --project-dir=examples/$@
 
-create-php-layer:
-	# aws ec2 create-security-group --group-name $(SECURITY_GROUP_NAME) --description $(SECURITY_GROUP_DESCRIPTION)
-	aws ec2 run-instances \
-		--image-id $(IMAGE_ID) \
-		--count 1 \
-		--instance-type $(INSTANCE_TYPE) \
-		--key-name $(KEY_NAME) \
-		--security-group-ids $(SECURITY_GROUP_ID) \
-		--subnet-id $(SUBNET_ID)
+docker-build:
+	docker build -t $(DOCKER_TAG) .
+
+docker-run:
+	docker run -it --rm $(DOCKER_TAG)
+
+docker-bash:
+	docker run -it --rm --entrypoint '' $(DOCKER_TAG) bash

@@ -6,7 +6,7 @@ use Aws\Ec2\Ec2Client;
 use Aws\Ec2\Exception\Ec2Exception;
 
 define('INSTANCE_IMAGE_ID', 'ami-08935252a36e25f85');
-define('INSTANCE_TYPE', 't1.micro');
+define('INSTANCE_TYPE', 'm3.large');
 define('KEY_PAIR_NAME', 'datashaman');
 define('SECURITY_GROUP_NAME', 'datashaman');
 define('SECURITY_GROUP_DESCRIPTION', 'datashaman');
@@ -16,7 +16,6 @@ class Builder
     private Ec2Client $client;
 
     private $securityGroup;
-    private $keyPair;
     private $instance;
 
     public function __construct()
@@ -28,67 +27,118 @@ class Builder
                 'version' => '2016-11-15',
             ]
         );
-    }
 
-    public function __destruct()
-    {
-        $this->clean();
+        // register_shutdown_function([$this, 'shutdown']);
     }
 
     public function build()
     {
-        $this->createSecurityGroup();
-        $this->createKeyPair();
+        $this->createKeyPairIfNeeded();
+        $this->createSecurityGroupIfNeeded();
         $this->runInstance();
     }
 
-    public function clean()
+    public function shutdown()
     {
         $this->terminateInstance();
-        $this->deleteKeyPair();
         $this->deleteSecurityGroup();
     }
 
-    protected function createSecurityGroup()
+    protected function createSecurityGroupIfNeeded()
     {
-        $result = $this->client->createSecurityGroup(
-            [
-                'Description' => SECURITY_GROUP_DESCRIPTION,
-                'GroupName' => SECURITY_GROUP_NAME,
-            ]
-        );
-        $this->securityGroup = $result->toArray();
-        $this->client->authorizeSecurityGroupIngress(
-            [
-                'GroupId' => $this->securityGroup['GroupId'],
-                'IpPermissions' => [
-                    [
-                        'FromPort' => 22,
-                        'IpProtocol' => 'tcp',
-                        'IpRanges' => [
-                            [
-                                'CidrIp' => '0.0.0.0/0',
+        $groupName = SECURITY_GROUP_NAME;
+
+        try {
+            $result = $this->client->createSecurityGroup(
+                [
+                    'Description' => SECURITY_GROUP_DESCRIPTION,
+                    'GroupName' => $groupName,
+                ]
+            );
+
+            $this->securityGroup = $result->toArray();
+            $groupId = $this->securityGroup['GroupId'];
+
+            $this->client->authorizeSecurityGroupIngress(
+                [
+                    'GroupId' => $groupId,
+                    'IpPermissions' => [
+                        [
+                            'FromPort' => 22,
+                            'IpProtocol' => 'tcp',
+                            'IpRanges' => [
+                                [
+                                    'CidrIp' => '0.0.0.0/0',
+                                ],
                             ],
-                        ],
-                        'ToPort' => 22,
+                            'ToPort' => 22,
+                        ]
+                    ],
+                ]
+            );
+            echo("Created security group: $groupId\n");
+        } catch (Ec2Exception $exception) {
+            if ($exception->getAwsErrorMessage() === "The security group '$groupName' already exists") {
+                $result = $this->client->describeSecurityGroups(
+                    [
+                        'GroupNames' => [SECURITY_GROUP_NAME],
                     ]
-                ],
-            ]
-        );
-        echo("Created security group: {$this->securityGroup['GroupId']}\n");
+                );
+
+                $groups = $result->get('SecurityGroups');
+                $this->securityGroup = $groups[0];
+                $groupId = $this->securityGroup['GroupId'];
+                echo("Found existing security group: $groupId\n");
+            } else {
+                throw $exception;
+            }
+        }
     }
 
-    protected function createKeyPair()
+    protected function getKeyPairPath()
     {
-        $result = $this->client->createKeyPair(
-            [
-                'KeyName' => KEY_PAIR_NAME,
-                'Query' => 'KeyMaterial',
-                'Output' => 'text',
-            ]
-        );
-        $this->keyPair = $result->toArray();
-        echo("Created key pair: {$this->keyPair['KeyPairId']}\n");
+        $keyName = KEY_PAIR_NAME;
+
+        return getenv('HOME') . "/.ssh/$keyName.pem";
+    }
+
+    protected function createKeyPairIfNeeded()
+    {
+        $keyName = KEY_PAIR_NAME;
+
+        try {
+            $result = $this->client->createKeyPair(
+                [
+                    'KeyName' => $keyName,
+                    'Query' => 'KeyMaterial',
+                    'Output' => 'text',
+                ]
+            );
+
+            $keyPair = $result->toArray();
+            $filename = $this->getKeyPairPath();
+
+            if (file_exists($filename)) {
+                echo "Found existing PEM private key, aborting\n";
+                exit(1);
+            }
+
+            file_put_contents(
+                $filename,
+                $keyPair['KeyMaterial']
+            );
+
+            chmod($filename, 0600);
+
+            echo("Saved PEM private key: {$filename}\n");
+            echo("Created key pair: {$keyPair['KeyPairId']}\n");
+        } catch (Ec2Exception $exception) {
+            if ($exception->getAwsErrorMessage() === "The keypair '$keyName' already exists.") {
+                echo("Found existing key pair\n");
+            } else {
+                throw $exception;
+            }
+        }
     }
 
     protected function runInstance()
@@ -106,8 +156,27 @@ class Builder
 
         $instances = $result->get('Instances');
         $this->instance = $instances[0];
+        $instanceId = $this->instance['InstanceId'];
 
-        echo ("Created instance: {$this->instance['InstanceId']}\n");
+        echo ("Pending instance: $instanceId\n");
+
+        do {
+            sleep(5);
+
+            $result = $this->client->describeInstances(
+                [
+                    'InstanceIds' => [$instanceId],
+                ]
+            );
+
+            $reservations = $result->get('Reservations');
+        } while (
+            $reservations
+            && $reservations[0]['Instances']
+            && $reservations[0]['Instances'][0]['State']['Name'] !== 'running'
+        );
+
+        echo ("Running instance: $instanceId\n");
     }
 
     protected function terminateInstance()
@@ -124,7 +193,7 @@ class Builder
 
         $instances = $result->get('TerminatingInstances');
         $instance = $instances[0];
-        echo ("Deleting instance: {$instance['InstanceId']}\n");
+        echo ("Terminating instance: {$instance['InstanceId']}\n");
 
         do {
             sleep(5);
@@ -142,24 +211,7 @@ class Builder
             && $reservations[0]['Instances'][0]['State']['Name'] !== 'terminated'
         );
 
-        echo ("Deleted instance: {$instance['InstanceId']}\n");
-    }
-
-    protected function deleteKeyPair()
-    {
-        if (!$this->keyPair) {
-            return;
-        }
-
-        $keyPairId = $this->keyPair['KeyPairId'];
-
-        $result = $this->client->deleteKeyPair(
-            [
-                'KeyPairId' => $keyPairId,
-            ]
-        );
-
-        echo ("Deleted key pair: $keyPairId\n");
+        echo ("Terminated instance: {$instance['InstanceId']}\n");
     }
 
     protected function deleteSecurityGroup()
