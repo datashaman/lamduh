@@ -1,34 +1,43 @@
-FROM lambci/lambda-base-2:build
+FROM lambci/lambda-base-2:build AS build
 
-RUN yum update -y \
-    && yum install -y \
-        autoconf \
-        gcc \
-        gcc-c++ \
-        libcurl-devel \
-        libxml2-devel \
-        openssl-devel \
-        re2c \
-        sqlite-devel \
-    && yum clean all
+ARG BISON_VERSION=3.6
+ARG PHP_VERSION=7.4.7
+ARG PREFIX=/var/task/php-bin-php-$PHP_VERSION
+
+RUN yum install -y \
+    autoconf \
+    gcc \
+    gcc-c++ \
+    libcurl-devel \
+    libxml2-devel \
+    openssl-devel \
+    re2c \
+    sqlite-devel
 
 RUN curl -sL http://mirror.ufs.ac.za/gnu/bison/bison-$BISON_VERSION.tar.gz | tar -xvz \
     && cd bison-$BISON_VERSION \
     && ./configure --prefix=/usr \
     && make \
-    && make install
-
-RUN curl -sL https://github.com/php/php-src/archive/php-$PHP_VERSION.tar.gz | tar -xvz \
+    && make install \
+    && cd .. \
+    && curl -sL https://github.com/php/php-src/archive/php-$PHP_VERSION.tar.gz | tar -xvz \
     && cd php-src-php-$PHP_VERSION \
     && ./buildconf --force \
-    && ./configure --prefix=/var/task --with-openssl --with-curl --with-zlib --without-pear \
+    && ./configure --prefix=$PREFIX --with-openssl --with-curl --with-zlib --without-pear \
     && make install
 
-COPY bootstrap .
-RUN chmod +x bootstrap \
-    && zip -r runtime.zip bin bootstrap
+COPY bootstrap $PREFIX
 
-RUN PATH=/var/task/bin:$PATH \
-    && curl -sS https://getcomposer.org/installer | php \
-    && php composer.phar require --optimize-autoloader guzzlehttp/guzzle \
-    && zip -r vendor.zip vendor/
+RUN cd $PREFIX \
+    && chmod +x bootstrap \
+    && zip -r /var/task/runtime.zip bin bootstrap -x bin/php-cgi bin/phpdbg \
+    && curl -sS https://getcomposer.org/installer | $PREFIX/bin/php \
+    && $PREFIX/bin/php composer.phar require --optimize-autoloader guzzlehttp/guzzle \
+    && zip -r /var/task/vendor.zip vendor/
+
+FROM busybox
+
+COPY --from=build /var/task/runtime.zip .
+COPY --from=build /var/task/vendor.zip .
+
+RUN mkdir artifacts
