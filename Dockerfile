@@ -2,12 +2,14 @@ FROM lambci/lambda-base-2:build AS build
 
 ARG BISON_VERSION=3.6
 ARG PHP_VERSION=7.4.7
-ARG PREFIX=/var/task/php-bin-php-$PHP_VERSION
+ARG PREFIX=/opt
+
+ENV PATH=/var/lang/bin:$PATH \
+    LD_LIBRARY_PATH=/var/lang/lib:$LD_LIBRARY_PATH \
+    AWS_EXECUTION_ENV=AWS_Lambda_PHP_$PHP_VERSION \
+    PKG_CONFIG_PATH=/var/lang/lib/pkgconfig:/usr/lib64/pkgconfig:/usr/share/pkgconfig
 
 RUN yum install -y \
-    autoconf \
-    gcc \
-    gcc-c++ \
     libcurl-devel \
     libxml2-devel \
     openssl-devel \
@@ -16,11 +18,10 @@ RUN yum install -y \
 
 RUN curl -sL http://mirror.ufs.ac.za/gnu/bison/bison-$BISON_VERSION.tar.gz | tar -xvz \
     && cd bison-$BISON_VERSION \
-    && ./configure --prefix=/usr \
-    && make \
-    && make install \
-    && cd .. \
-    && curl -sL https://github.com/php/php-src/archive/php-$PHP_VERSION.tar.gz | tar -xvz \
+    && ./configure \
+    && make install
+
+RUN curl -sL https://github.com/php/php-src/archive/php-$PHP_VERSION.tar.gz | tar -xvz \
     && cd php-src-php-$PHP_VERSION \
     && ./buildconf --force \
     && ./configure --prefix=$PREFIX --with-openssl --with-curl --with-zlib --without-pear \
@@ -28,16 +29,9 @@ RUN curl -sL http://mirror.ufs.ac.za/gnu/bison/bison-$BISON_VERSION.tar.gz | tar
 
 COPY bootstrap $PREFIX
 
+ENV PATH=$PREFIX/bin:$PATH
+
 RUN cd $PREFIX \
     && chmod +x bootstrap \
-    && zip -r /var/task/runtime.zip bin bootstrap -x bin/php-cgi bin/phpdbg \
-    && curl -sS https://getcomposer.org/installer | $PREFIX/bin/php \
-    && $PREFIX/bin/php composer.phar require --optimize-autoloader guzzlehttp/guzzle \
-    && zip -r /var/task/vendor.zip vendor/
-
-FROM busybox
-
-COPY --from=build /var/task/runtime.zip .
-COPY --from=build /var/task/vendor.zip .
-
-RUN mkdir artifacts
+    && curl -sS https://getcomposer.org/installer | php \
+    && php composer.phar require --optimize-autoloader guzzlehttp/guzzle
