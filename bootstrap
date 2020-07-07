@@ -5,6 +5,8 @@ require_once 'vendor/autoload.php';
 
 use GuzzleHttp\Client;
 
+phpinfo();
+
 class RuntimeHandler
 {
     /**

@@ -29,15 +29,6 @@ RUN yum install -y \
 RUN mkdir /tmp/${PHP_PACKAGE}
 WORKDIR /tmp/${PHP_PACKAGE}
 
-COPY bootstrap php.ini ./
-
-RUN sed -i "s/PHP_VERSION/${PHP_VERSION}/g" php.ini \
-    && mkdir bin \
-    && cp /usr/bin/php bin \
-    && curl -sL https://getcomposer.org/installer | bin/php -- --install-dir=bin/ --filename=composer
-
-RUN bin/composer require guzzlehttp/guzzle:^7.0
-
 RUN mkdir lib \
     && cp \
         /usr/lib64/libargon2.so* \
@@ -52,6 +43,17 @@ RUN mkdir lib \
         lib/php/${PHP_VERSION} \
     && cp -a /usr/lib64/php/${PHP_VERSION}/modules \
         lib/php/${PHP_VERSION}
+
+COPY php.ini .
+
+RUN sed -i "s/PHP_VERSION/${PHP_VERSION}/g" php.ini \
+    && mkdir bin \
+    && cp /usr/bin/php bin \
+    && curl -sL https://getcomposer.org/installer | bin/php -- --install-dir=bin/ --filename=composer
+
+COPY bootstrap .
+
+RUN bin/composer require guzzlehttp/guzzle:^7.0
 
 FROM busybox
 

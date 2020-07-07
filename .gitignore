@@ -1,5 +1,5 @@
 /app.php
-/composer.lock
+composer.lock
 /.phial
 /phial.log
 /vendor/
