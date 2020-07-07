@@ -1,37 +1,58 @@
-FROM lambci/lambda-base-2:build AS build
+FROM lambci/lambda:build-provided
 
-ARG BISON_VERSION=3.6
-ARG PHP_VERSION=7.4.7
-ARG PREFIX=/opt
+ARG PHP_MAJOR_VERSION=7
+ARG PHP_MINOR_VERSION=3
+ARG EPEL_VERSION=7
 
-ENV PATH=/var/lang/bin:$PATH \
-    LD_LIBRARY_PATH=/var/lang/lib:$LD_LIBRARY_PATH \
-    AWS_EXECUTION_ENV=AWS_Lambda_PHP_$PHP_VERSION \
-    PKG_CONFIG_PATH=/var/lang/lib/pkgconfig:/usr/lib64/pkgconfig:/usr/share/pkgconfig
+ENV PHP_PACKAGE=php${PHP_MAJOR_VERSION}${PHP_MINOR_VERSION}
+ENV PHP_VERSION=${PHP_MAJOR_VERSION}.${PHP_MINOR_VERSION}
+
+RUN yum update -y
+
+RUN rpm --import https://download.fedoraproject.org/pub/epel/RPM-GPG-KEY-EPEL-7
 
 RUN yum install -y \
-    libcurl-devel \
-    libxml2-devel \
-    openssl-devel \
-    re2c \
-    sqlite-devel
+    https://dl.fedoraproject.org/pub/epel/epel-release-latest-$EPEL_VERSION.noarch.rpm
 
-RUN curl -sL http://mirror.ufs.ac.za/gnu/bison/bison-$BISON_VERSION.tar.gz | tar -xvz \
-    && cd bison-$BISON_VERSION \
-    && ./configure \
-    && make install
+RUN yum install -y \
+    libargon2 \
+    oniguruma \
+    ${PHP_PACKAGE} \
+    ${PHP_PACKAGE}-json \
+    ${PHP_PACKAGE}-mbstring \
+    ${PHP_PACKAGE}-mysql \
+    ${PHP_PACKAGE}-pdo \
+    ${PHP_PACKAGE}-pgsql \
+    ${PHP_PACKAGE}-process \
+    ${PHP_PACKAGE}-xml
 
-RUN curl -sL https://github.com/php/php-src/archive/php-$PHP_VERSION.tar.gz | tar -xvz \
-    && cd php-src-php-$PHP_VERSION \
-    && ./buildconf --force \
-    && ./configure --prefix=$PREFIX --with-openssl --with-curl --with-zlib --without-pear \
-    && make install
+RUN mkdir /tmp/${PHP_PACKAGE}
+WORKDIR /tmp/${PHP_PACKAGE}
 
-COPY bootstrap $PREFIX
+COPY bootstrap php.ini ./
 
-ENV PATH=$PREFIX/bin:$PATH
+RUN sed -i "s/PHP_VERSION/${PHP_VERSION}/g" php.ini \
+    && mkdir bin \
+    && cp /usr/bin/php bin \
+    && curl -sL https://getcomposer.org/installer | bin/php -- --install-dir=bin/ --filename=composer
 
-RUN cd $PREFIX \
-    && chmod +x bootstrap \
-    && curl -sS https://getcomposer.org/installer | php \
-    && php composer.phar require --optimize-autoloader guzzlehttp/guzzle
+RUN bin/composer require guzzlehttp/guzzle:^7.0
+
+RUN mkdir lib \
+    && cp \
+        /usr/lib64/libargon2.so* \
+        /usr/lib64/libedit.so* \
+        /usr/lib64/libncurses.so* \
+        /usr/lib64/libonig.so* \
+        /usr/lib64/libpcre.so* \
+        /usr/lib64/libpq.so* \
+        /usr/lib64/libtinfo.so* \
+        lib \
+    && mkdir -p \
+        lib/php/${PHP_VERSION} \
+    && cp -a /usr/lib64/php/${PHP_VERSION}/modules \
+        lib/php/${PHP_VERSION}
+
+FROM busybox
+
+COPY --from=0 /tmp/${PHP_PACKAGE} /tmp/${PHP_PACKAGE}

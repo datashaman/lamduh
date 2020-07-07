@@ -1,56 +1,131 @@
-#!/usr/bin/env php
+#!/opt/bin/php -c /opt/php.ini
 <?php
-/* Copyright 2020 Amazon.com, Inc. or its affiliates. All Rights Reserved.
 
-Permission is hereby granted, free of charge, to any person obtaining a copy of this
-software and associated documentation files (the "Software"), to deal in the Software
-without restriction, including without limitation the rights to use, copy, modify,
-merge, publish, distribute, sublicense, and/or sell copies of the Software, and to
-permit persons to whom the Software is furnished to do so.
+require_once 'vendor/autoload.php';
 
-THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLIED,
-INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY, FITNESS FOR A
-PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT
-HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION
-OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE
-SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
- */
+use GuzzleHttp\Client;
 
-// This invokes Composer's autoloader so that we'll be able to use Guzzle and any other 3rd party libraries we need.
-require __DIR__ . '/vendor/autoload.php';
-
-// This is the request processing loop. Barring unrecoverable failure, this loop runs until the environment shuts down.
-do {
-    // Ask the runtime API for a request to handle.
-    $request = getNextRequest();
-
-    // Obtain the function name from the _HANDLER environment variable and ensure the function's code is available.
-    $handlerFunction = array_slice(explode('.', $_ENV['_HANDLER']), -1)[0];
-    require_once $_ENV['LAMBDA_TASK_ROOT'] . '/src/' . $handlerFunction . '.php';
-
-    // Execute the desired function and obtain the response.
-    $response = $handlerFunction($request['payload']);
-
-    // Submit the response back to the runtime API.
-    sendResponse($request['invocationId'], $response);
-} while (true);
-
-function getNextRequest()
+class RuntimeHandler
 {
-    $client = new \GuzzleHttp\Client();
-    $response = $client->get('http://' . $_ENV['AWS_LAMBDA_RUNTIME_API'] . '/2018-06-01/runtime/invocation/next');
+    /**
+     * @var string
+     */
+    private $api;
 
-    return [
-      'invocationId' => $response->getHeader('Lambda-Runtime-Aws-Request-Id')[0],
-      'payload' => json_decode((string) $response->getBody(), true)
-    ];
+    /**
+     * @var string
+     */
+    private $handler;
+
+    /**
+     * @var string
+     */
+    private $root;
+
+    /**
+     * @var Client
+     */
+    private $client;
+
+    /**
+     * @var string
+     */
+    private $requestId = '';
+
+    /**
+     * @var bool
+     */
+    private $invoked = false;
+
+    public function __construct()
+    {
+        error_reporting(
+            E_ALL &
+            ~E_USER_DEPRECATED &
+            ~E_DEPRECATED &
+            ~E_STRICT &
+            ~E_NOTICE
+        );
+    }
+
+    public function handle()
+    {
+        $this->init();
+        $this->processLoop();
+    }
+
+    private function init()
+    {
+        try {
+            $this->api = getenv('AWS_LAMBDA_RUNTIME_API');
+            $this->handler = getenv('_HANDLER');
+            $this->root = getenv('LAMBDA_TASK_ROOT');
+
+            $this->client = new Client(
+                [
+                    'base_uri' => "http://{$this->api}/2018-06-01/",
+                ]
+            );
+        } catch (Throwable $exception) {
+            $this->postError($exception);
+        }
+    }
+
+    private function processLoop()
+    {
+        echo "before event loop";
+
+        while (true) {
+            try {
+                echo "in event loop";
+                $event = $this->getNextInvocation();
+                $response = json_encode($event, JSON_PRETTY_PRINT);
+                $this->postResponse($response);
+            } catch (Throwable $exception) {
+                $this->postError($exception);
+            }
+        }
+    }
+
+    private function getNextInvocation(): array
+    {
+        echo "get next invocation";
+        $response = $this->client->get('runtime/invocation/next');
+        $this->requestId = $response->header('Lambda-Runtime-Aws-Request-Id');
+        $this->invoked = true;
+
+        return json_decode($response->getBody(), true);
+    }
+
+    private function postResponse(string $requestId, string $response): void
+    {
+        echo "post response";
+        $this->client->post("runtime/invocation/$requestId/response", ['body' => $response]);
+    }
+
+    private function postError(Throwable $exception)
+    {
+        $response = json_encode(
+            [
+                'errorMessage' => $exception->getMessage(),
+                'errorType' => get_class($exception),
+            ]
+        );
+
+        $path = $this->invoked
+            ? "runtime/invocation/$requestId/error"
+            : 'runtime/init/error';
+
+        $this->client->post(
+            $path,
+            [
+                'body' => $response,
+                'headers' => [
+                    'Lambda-Runtime-Function-Error-Type' => 'Unhandled',
+                ],
+            ]
+        );
+    }
 }
 
-function sendResponse($invocationId, $response)
-{
-    $client = new \GuzzleHttp\Client();
-    $client->post(
-    'http://' . $_ENV['AWS_LAMBDA_RUNTIME_API'] . '/2018-06-01/runtime/invocation/' . $invocationId . '/response',
-       ['body' => $response]
-    );
-}
+(new RuntimeHandler())->handle();
