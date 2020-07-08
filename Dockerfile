@@ -57,13 +57,9 @@ RUN mkdir bin \
 
 RUN bin/composer require guzzlehttp/guzzle:^7.0
 
-COPY bootstrap.php ./
-
 FROM lambci/lambda:provided
 
 WORKDIR /var/task
 
 COPY --from=0 /opt/bootstrap /opt
 COPY --from=0 /opt/${PHP_PACKAGE} /opt
-
-# ENTRYPOINT ["/opt/bootstrap"]

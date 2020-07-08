@@ -1,3 +1,5 @@
 #!/usr/bin/env bash
 
-/opt/PHP_PACKAGE/bin/php -c /opt/PHP_PACKAGE/php.ini /opt/PHP_PACKAGE/bootstrap.php
+: "${PHP_PACKAGE:=7.3}"
+
+/opt/$PHP_PACKAGE/bin/php -c /opt/$PHP_PACKAGE/php.ini /opt/$PHP_PACKAGE/bootstrap.php
