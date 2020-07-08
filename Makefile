@@ -5,7 +5,7 @@ IMAGE_TAG = datashaman/phial-73
 # INSTANCE_TYPE = t2.large
 INSTANCE_TYPE = t2.micro
 KEY_NAME = datashaman
-MD5SUM = $(word 1, $(shell md5sum --binary .build/$(PHP_PACKAGE).zip))
+MD5SUM = $(word 1, $(shell md5sum --binary dist/$(PHP_PACKAGE).zip))
 PHP_MAJOR_VERSION = 7
 PHP_MINOR_VERSION = 3
 PHP_PACKAGE = php$(subst .,,$(PHP_VERSION))
@@ -31,20 +31,24 @@ build:
 dist: $(PHP_PACKAGE).zip
 
 $(PHP_PACKAGE).zip:
-	docker run -it --rm -v $(PWD)/.build:/build $(IMAGE_TAG) cp -a /tmp/$(PHP_PACKAGE) /build
-	sudo chown -R marlinf:marlinf .build/$(PHP_PACKAGE)
-	cd .build/$(PHP_PACKAGE) && zip -r ../../dist/$(PHP_PACKAGE).zip .
+	docker run --entrypoint '' -it --rm --user root --volume $(PWD)/.build:/build:rw $(IMAGE_TAG) bash -c 'cp -a /opt/* /build'
+	sudo chown -R marlinf:marlinf .build/*
+	cd .build/ && zip -r ../dist/$(PHP_PACKAGE).zip .
 
 clean:
-	sudo rm -rf .build/*
+	sudo rm -rf .build/* dist/*
 
 upload:
-	aws --region $(AWS_REGION) s3 cp .build/$(PHP_PACKAGE).zip s3://$(S3_BUCKET)/$(S3_KEY)
+	aws --region $(AWS_REGION) s3 cp dist/$(PHP_PACKAGE).zip s3://$(S3_BUCKET)/$(S3_KEY)
 
 publish: clean build dist upload
 	aws --region $(AWS_REGION) lambda add-layer-version-permission --layer-name $(PHP_PACKAGE) --version-number $(VERSION) --statement-id=public --action lambda:GetLayerVersion --principal '*'
 
-rebuild: clean package
-
 $(examples):
 	./phial local --project-dir=examples/$@
+
+bash:
+	docker run -it --rm --entrypoint '' --env PATH=/opt/php73/bin:/usr/local/bin:/usr/bin:/bin -t $(IMAGE_TAG) bash
+
+run:
+	docker run -it --rm --env PATH=/opt/php73/bin:/usr/local/bin:/usr/bin:/bin -t $(IMAGE_TAG)
