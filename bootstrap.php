@@ -2,10 +2,17 @@
 
 require_once __DIR__ . '/vendor/autoload.php';
 
+use DI\ContainerBuilder;
 use GuzzleHttp\Client;
+use Psr\Container\ContainerInterface;
 
 class RuntimeHandler
 {
+    /**
+     * @var ContainerInterface
+     */
+    private $container;
+
     /**
      * @var string
      */
@@ -31,13 +38,12 @@ class RuntimeHandler
      */
     private $requestId = '';
 
-    /**
-     * @var bool
-     */
-    private $invoked = false;
-
     public function __construct()
     {
+        $this->api = getenv('AWS_LAMBDA_RUNTIME_API');
+        $this->handler = getenv('_HANDLER');
+        $this->root = getenv('LAMBDA_TASK_ROOT');
+
         error_reporting(
             E_ALL &
             ~E_USER_DEPRECATED &
@@ -45,6 +51,18 @@ class RuntimeHandler
             ~E_STRICT &
             ~E_NOTICE
         );
+
+        $containerBuilder = new ContainerBuilder();
+
+        if (file_exists(__DIR__ . '/config.php')) {
+            $containerBuilder->addDefinitions(__DIR__ . '/config.php');
+        }
+
+        if (file_exists($this->root . '/config.php')) {
+            $containerBuilder->addDefinitions($this->root . '/config.php');
+        }
+
+        $this->container = $containerBuilder->build();
     }
 
     public function handle()
@@ -56,10 +74,6 @@ class RuntimeHandler
     private function init()
     {
         try {
-            $this->api = getenv('AWS_LAMBDA_RUNTIME_API');
-            $this->handler = getenv('_HANDLER');
-            $this->root = getenv('LAMBDA_TASK_ROOT');
-
             $this->client = new Client(
                 [
                     'base_uri' => "http://{$this->api}/2018-06-01/",
@@ -74,9 +88,10 @@ class RuntimeHandler
     {
         while (true) {
             try {
-                [$requestId, $event] = $this->getNextInvocation();
-                $response = json_encode($event, JSON_PRETTY_PRINT);
-                $this->postResponse($requestId, $response);
+                $event = $this->getNextInvocation();
+                $context = [];
+                $response = $this->container->call($this->handler, [$event, $context]);
+                $this->postResponse($response);
             } catch (Throwable $exception) {
                 $this->postError($exception);
             }
@@ -86,17 +101,14 @@ class RuntimeHandler
     private function getNextInvocation(): array
     {
         $response = $this->client->get('runtime/invocation/next');
-        $this->invoked = true;
+        $this->requestId = $response->getHeader('lambda-runtime-aws-request-id')[0];
 
-        return [
-            $response->getHeader('lambda-runtime-aws-request-id')[0],
-            json_decode($response->getBody(), true),
-        ];
+        return json_decode($response->getBody(), true);
     }
 
-    private function postResponse(string $requestId, string $response): void
+    private function postResponse(string $response): void
     {
-        $this->client->post("runtime/invocation/$requestId/response", ['body' => $response]);
+        $this->client->post("runtime/invocation/{$this->requestId}/response", ['body' => $response]);
     }
 
     private function postError(Throwable $exception)
@@ -108,8 +120,8 @@ class RuntimeHandler
             ]
         );
 
-        $path = $this->invoked
-            ? "runtime/invocation/$requestId/error"
+        $path = $this->requestId
+            ? "runtime/invocation/{$this->requestId}/error"
             : 'runtime/init/error';
 
         $this->client->post(
@@ -122,7 +134,7 @@ class RuntimeHandler
             ]
         );
 
-        if (!$this->invoked) {
+        if (!$this->requestId) {
             exit(1);
         }
     }

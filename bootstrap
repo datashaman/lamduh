@@ -1,5 +1,13 @@
 #!/usr/bin/env bash
 
-: "${PHP_PACKAGE:=7.3}"
+: "${PHP_PACKAGE:=php73}"
 
-/opt/$PHP_PACKAGE/bin/php -c /opt/$PHP_PACKAGE/php.ini /opt/$PHP_PACKAGE/bootstrap.php
+echo "Bootstrap ${PHP_PACKAGE}"
+echo "Environment:"
+env | sort
+
+ls -la /
+ls -la /opt
+ls -la /opt/${PHP_PACKAGE};
+
+/opt/${PHP_PACKAGE}/bin/php -c /opt/${PHP_PACKAGE}/php.ini /opt/${PHP_PACKAGE}/bootstrap.php;

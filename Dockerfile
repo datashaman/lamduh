@@ -27,6 +27,7 @@ RUN yum install -y \
     ${PHP_PACKAGE}-xml
 
 WORKDIR /opt
+
 RUN mkdir lib \
     && cp \
         /usr/lib64/libargon2.so* \
@@ -38,24 +39,26 @@ RUN mkdir lib \
         /usr/lib64/libtinfo.so* \
         lib
 
-COPY bootstrap .
-RUN sed -i "s/PHP_PACKAGE/${PHP_PACKAGE}/g" bootstrap
-
 RUN mkdir /opt/${PHP_PACKAGE}
+
 WORKDIR /opt/${PHP_PACKAGE}
 
 RUN mkdir -p lib/php \
     && cp -a /usr/lib64/php/${PHP_VERSION}/modules \
         lib/php
 
-COPY php.ini .
-RUN sed -i "s/PHP_PACKAGE/${PHP_PACKAGE}/g" php.ini
-
 RUN mkdir bin \
     && cp /usr/bin/{phar,php} bin \
     && curl -sL https://getcomposer.org/installer | bin/php -- --install-dir=bin/ --filename=composer
 
-RUN bin/composer require guzzlehttp/guzzle:^7.0
+RUN bin/composer require guzzlehttp/guzzle:^7.0 php-di/php-di
+
+COPY bootstrap.php php.ini ./
+RUN sed -i 's/\${PHP_PACKAGE}/${PHP_PACKAGE}/g' php.ini
+
+WORKDIR /opt
+
+COPY bootstrap .
 
 FROM lambci/lambda:provided
 

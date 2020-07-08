@@ -50,11 +50,11 @@ $(examples):
 bash:
 	docker run -it --rm --entrypoint '' --env PATH=/opt/php73/bin:/usr/local/bin:/usr/bin:/bin -t $(IMAGE_TAG) bash
 
-run:
+event:
 	docker run -it --rm \
 		--env PATH=/opt/php73/bin:/usr/local/bin:/usr/bin:/bin \
 		--env PHP_PACKAGE=$(PHP_PACKAGE) \
 		--volume $(PWD)/.build:/opt \
 		--volume $(PWD):/var/task \
 		$(IMAGE_TAG) \
-		bash
+		SomeController::method '{"hello":"world"}'
