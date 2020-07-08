@@ -10,7 +10,7 @@
         }
     ],
     "require": {
-        "php": ">=7.4",
+        "php": ">=7.3",
         "aws/aws-sdk-php": "^3.143",
         "filp/whoops": "^2.7",
         "laminas/laminas-diactoros": "^2.3",

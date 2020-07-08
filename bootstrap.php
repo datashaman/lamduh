@@ -52,6 +52,10 @@ class RuntimeHandler
             ~E_NOTICE
         );
 
+        if (file_exists($this->root . '/vendor/autoload.php')) {
+            include_once $this->root . '/vendor/autoload.php';
+        }
+
         $containerBuilder = new ContainerBuilder();
 
         if (file_exists(__DIR__ . '/config.php')) {

@@ -29,4 +29,11 @@ return [
             DI\get('log.path'),
             DI\get('log.level')
         ),
+
+    'handler' => function ($event, $context) {
+        return [
+            'event' => $event,
+            'context' => $context,
+        ];
+    },
 ];

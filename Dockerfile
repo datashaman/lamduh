@@ -51,7 +51,8 @@ RUN mkdir bin \
     && cp /usr/bin/{phar,php} bin \
     && curl -sL https://getcomposer.org/installer | bin/php -- --install-dir=bin/ --filename=composer
 
-RUN bin/composer require guzzlehttp/guzzle:^7.0 php-di/php-di
+COPY composer.json composer.lock ./
+RUN bin/composer install
 
 COPY bootstrap.php php.ini ./
 RUN sed -i 's/\${PHP_PACKAGE}/${PHP_PACKAGE}/g' php.ini
