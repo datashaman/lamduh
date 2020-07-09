@@ -16,6 +16,16 @@ use Whoops\Run;
 final class Phial
 {
     /**
+     * @var string
+     */
+    private $appName;
+
+    /**
+     * @var ContainerInterface
+     */
+    private $container;
+
+    /**
      * @param string $appName
      * @param ?LoggerInterface $logger
      */
