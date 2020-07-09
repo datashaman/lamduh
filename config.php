@@ -2,6 +2,8 @@
 
 declare(strict_types=1);
 
+use Psr\Container\ContainerInterface;
+
 return [
     'app.debug' => false,
     'app.name' => 'phial',
@@ -22,7 +24,7 @@ return [
 
     Psr\Http\Server\RequestHandlerInterface::class => DI\create(Datashaman\Phial\RequestHandler::class)
         ->constructor(
-            DI\get(Psr\Container\ContainerInterface::class)
+            DI\get(ContainerInterface::class)
         ),
 
     Psr\Log\LoggerInterface::class => DI\create(Datashaman\Phial\Logger::class)
@@ -31,11 +33,4 @@ return [
             DI\get('log.path'),
             DI\get('log.level')
         ),
-
-    'handler' => function ($event, $context) {
-        return [
-            'event' => $event,
-            'context' => $context,
-        ];
-    },
 ];

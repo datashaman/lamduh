@@ -1,6 +1,8 @@
 <?php
 
-require_once __DIR__ . '/vendor/autoload.php';
+if (file_exists(__DIR__ . '/vendor/autoload.php')) {
+    include_once __DIR__ . '/vendor/autoload.php';
+}
 
 use DI\ContainerBuilder;
 use GuzzleHttp\Client;
@@ -94,7 +96,12 @@ class RuntimeHandler
             try {
                 $event = $this->getNextInvocation();
                 $context = [];
-                $response = $this->container->call($this->handler, [$event, $context]);
+                $response = $this->container->make(
+                    $this->handler,
+                    [
+                        'event' => $event,
+                    ]
+                );
                 $this->postResponse($response);
             } catch (Throwable $exception) {
                 $this->postError($exception);
@@ -110,7 +117,7 @@ class RuntimeHandler
         return json_decode($response->getBody(), true);
     }
 
-    private function postResponse(string $response): void
+    private function postResponse($response): void
     {
         $this->client->post("runtime/invocation/{$this->requestId}/response", ['body' => $response]);
     }

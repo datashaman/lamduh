@@ -57,4 +57,4 @@ event:
 		--volume $(PWD)/.build:/opt \
 		--volume $(PWD):/var/task \
 		$(IMAGE_TAG) \
-		SomeController::method '{"hello":"world"}'
+		'Datashaman\Phial\Handler\TestHandler' '{"hello":"world"}'
