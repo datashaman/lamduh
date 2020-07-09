@@ -119,7 +119,7 @@ class RuntimeHandler
     {
         $response = json_encode(
             [
-                'errorMessage' => $exception->getMessage(),
+                'errorMessage' => $exception->getMessage() . ' ' . $exception->getFile() . ':' . $exception->getLine(),
                 'errorType' => get_class($exception),
             ]
         );

@@ -54,7 +54,7 @@ RUN mkdir bin \
 COPY composer.json composer.lock ./
 RUN bin/composer install
 
-COPY bootstrap.php php.ini ./
+COPY bootstrap.php config.php php.ini ./
 RUN sed -i 's/\${PHP_PACKAGE}/${PHP_PACKAGE}/g' php.ini
 
 WORKDIR /opt

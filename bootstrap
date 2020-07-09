@@ -3,10 +3,10 @@
 : "${PHP_PACKAGE:=php73}"
 
 echo "Bootstrap ${PHP_PACKAGE}"
+
 echo "Environment:"
 env | sort
 
-ls -la /
 ls -la /opt
 ls -la /opt/${PHP_PACKAGE};
 
